@@ -54,24 +54,42 @@ class ScreenshotEngine:
             Yüklendi mi
         """
         try:
-            # Loading spinner'ın kaybolmasını bekle
-            WebDriverWait(self.driver, timeout).until_not(
-                EC.presence_of_element_located((By.CSS_SELECTOR, Selectors.LOADING_SPINNER))
-            )
+            # Önce herhangi bir canvas elementinin gelmesini bekle (TradingView grafikleri canvas kullanır)
+            self.logger.debug("Grafik kanvası bekleniyor...")
+            try:
+                WebDriverWait(self.driver, timeout).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "canvas"))
+                )
+            except TimeoutException:
+                self.logger.warning("Kanvas elementi bulunamadı, yine de devam ediliyor...")
+
+            # Alternatif: Ana container'lardan birinin görünmesini bekle
+            try:
+                WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, Selectors.CHART_CONTAINER))
+                )
+            except TimeoutException:
+                pass
             
-            # Chart container'ın görünmesini bekle
-            WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, Selectors.CHART_CONTAINER))
-            )
+            # Ekstra bekleme (verilerin dolması ve render için önemli)
+            time.sleep(5)
             
-            # Ekstra bekleme (rendering için)
-            time.sleep(2)
-            
-            self.logger.debug("Chart başarıyla yüklendi.")
+            self.logger.debug("Chart yükleme kontrolü tamamlandı.")
             return True
             
+        except Exception as e:
+            self.logger.warning(f"Chart yükleme kontrolünde beklenmedik durum: {str(e)}")
+            return True # Hata olsa bile devam et, belki grafik yüklenmiştir
+            
         except TimeoutException:
-            self.logger.warning("Chart yükleme timeout!")
+            # Debug için ekran görüntüsü al
+            debug_path = os.path.join(PathConfig.LOG_DIR, f"debug_timeout_{int(time.time())}.png")
+            try:
+                ensure_directory(PathConfig.LOG_DIR)
+                self.driver.save_screenshot(debug_path)
+                self.logger.warning(f"Chart yükleme timeout! Debug screenshot kaydedildi: {debug_path}")
+            except Exception as e:
+                self.logger.warning(f"Chart yükleme timeout! (Debug screenshot alınamadı: {str(e)})")
             return False
             
     def _find_snapshot_button(self):

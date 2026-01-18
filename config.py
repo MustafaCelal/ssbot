@@ -159,20 +159,20 @@ class Selectors:
     SNAPSHOT_BUTTON_ALT: str = 'button[aria-label="Take a snapshot"]'
     
     # Chart container
-    CHART_CONTAINER: str = '.chart-container'
-    CHART_WIDGET: str = '#chart-area'
+    CHART_CONTAINER: str = ".chart-container, .chart-container-border, .chart-gui-wrapper, .layout__area--center"
+    CHART_WIDGET: str = "#chart-area"
     
     # Loading indicators
-    LOADING_SPINNER: str = '.tv-spinner'
-    CHART_LOADING: str = '.chart-loading-indicator'
+    LOADING_SPINNER: str = ".tv-loader, .tv-spinner, .loading-indicator"
+    CHART_LOADING: str = ".chart-loading-indicator"
     
     # Dialog/Modal
-    SNAPSHOT_DIALOG: str = '.tv-dialog__modal-container'
-    DOWNLOAD_BUTTON: str = '[data-name="download-chart-image"]'
+    SNAPSHOT_DIALOG: str = ".tv-dialog__modal-container, #overlap-manager-root .dialog-29_Z9_cn"
+    DOWNLOAD_BUTTON: str = '[data-name="download-chart-image"], [data-name="save-chart-image"]'
     COPY_LINK_BUTTON: str = '[data-name="copy-link-to-the-chart-image"]'
     
-    # Cookie consent
-    COOKIE_ACCEPT_BUTTON: str = '.cookie-policy-button-accept'
+    # Cookie consent / Popups
+    COOKIE_ACCEPT_BUTTON: str = "button.accept-cookies, .cookie-policy-button-accept, [data-role='accept-all'], #overlap-manager-root button"
     
     # Login elements
     LOGIN_BUTTON: str = '[data-name="header-user-menu-sign-in"]'
