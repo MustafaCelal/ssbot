@@ -246,6 +246,52 @@ class BrowserManager:
             self.logger.debug(f"Element bulunamadı: {selector}")
             return None
     
+    def clear_overlays(self) -> None:
+        """
+        Onboarding tooltips, ads ve diğer engelleyici elementleri temizler.
+        """
+        if not self.driver:
+            return
+            
+        script = """
+        (function() {
+            // 1. 'Got it' veya 'Anladım' yazan butonlara tıkla
+            const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'));
+            const gotItButtons = buttons.filter(b => {
+                const txt = b.textContent.toLowerCase();
+                return txt.includes('got it') || txt.includes('anladım') || txt.includes('tamam');
+            });
+            gotItButtons.forEach(b => {
+                try { b.click(); } catch(e) {}
+            });
+
+            // 2. Onboarding ve discovery elementlerini kaldır
+            const selectors = [
+                '#overlap-manager-root',
+                '[class*="onboarding-tooltip"]',
+                '[class*="feature-discovery"]',
+                '[class*="dialog"]',
+                '.tv-dialog',
+                '.cookie-banner-container',
+                '[id*="cookies-policy"]'
+            ];
+            
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(el => {
+                    try { el.remove(); } catch(e) {}
+                });
+            });
+            
+            return true;
+        })();
+        """
+        try:
+            self.driver.execute_script(script)
+            self.logger.debug("Overlays temizlendi.")
+        except Exception as e:
+            self.logger.debug(f"Overlay temizleme hatası: {str(e)}")
+
     def dismiss_popups(self) -> None:
         """
         Cookie consent ve diğer popup'ları kapatır.

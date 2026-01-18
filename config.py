@@ -109,13 +109,14 @@ class TradingViewURLs:
     CHART_URL: str = "https://www.tradingview.com/chart"
     
     @staticmethod
-    def get_symbol_url(symbol: str, exchange: str = None, theme: str = "dark") -> str:
+    def get_symbol_url(symbol: str, exchange: str = None, timeframe: str = "1D", theme: str = "dark") -> str:
         """
         Sembol URL'i oluşturur.
         
         Args:
             symbol: İşlem çifti (ör: BTCUSDT)
             exchange: Borsa adı (ör: BINANCE)
+            timeframe: Zaman dilimi (ör: 1D, 5, 1H)
             theme: Tema (light/dark)
             
         Returns:
@@ -126,7 +127,7 @@ class TradingViewURLs:
         else:
             full_symbol = symbol
             
-        return f"https://www.tradingview.com/chart/?symbol={full_symbol}&theme={theme}"
+        return f"https://www.tradingview.com/chart/?symbol={full_symbol}&interval={timeframe}&theme={theme}"
 
 
 # ========================

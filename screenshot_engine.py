@@ -296,8 +296,8 @@ class ScreenshotEngine:
         error_msg = ""
         
         try:
-            # URL oluştur
-            url = TradingViewURLs.get_symbol_url(symbol, exchange, theme)
+            # URL oluştur (zaman dilimini URL parametresi olarak ekledik)
+            url = TradingViewURLs.get_symbol_url(symbol, exchange, timeframe, theme)
             self.logger.info(f"Screenshot alınıyor: {exchange}:{symbol} ({timeframe})")
             
             # Sayfaya git
@@ -313,6 +313,9 @@ class ScreenshotEngine:
             
             # Timeframe değiştir (gerekirse)
             self._set_timeframe(timeframe)
+            
+            # Overlays temizle (onboarding tooltips vb.)
+            self.browser.clear_overlays()
             
             # Random bekleme (anti-bot)
             delay = random_delay()
@@ -372,26 +375,28 @@ class ScreenshotEngine:
             Başarılı mı
         """
         try:
-            # Timeframe menüsünü aç
-            tf_button = self.driver.find_element(
-                By.CSS_SELECTOR, 
-                '[data-name="time-interval-menu-button"]'
-            )
-            if tf_button:
-                tf_button.click()
+            # Önce klavye kısayolu ile dene (En güvenilir yöntem)
+            self.logger.debug(f"Klavye kısayolu ile timeframe değiştiriliyor: {timeframe}")
+            
+            # Chart'ın odaklandığından emin olmak için bir tık atalım
+            try:
+                canvas = self.driver.find_element(By.TAG_NAME, "canvas")
+                ActionChains(self.driver).move_to_element(canvas).click().perform()
                 time.sleep(0.5)
-                
-                # Timeframe seç
-                tf_option = self.driver.find_element(
-                    By.CSS_SELECTOR,
-                    f'[data-value="{timeframe}"]'
-                )
-                if tf_option:
-                    tf_option.click()
-                    time.sleep(1)
-                    return True
+            except:
+                pass
+
+            actions = ActionChains(self.driver)
+            actions.send_keys(timeframe).send_keys(Keys.ENTER).perform()
+            time.sleep(2) # Yükleme için bekle
+            
+            # Alternatif: Menü üzerinden (Eski yöntem - yedek olarak dursun)
+            # tf_button = self.driver.find_element(By.CSS_SELECTOR, '[data-name="time-interval-menu-button"]')
+            # ...
+            
+            return True
                     
         except Exception as e:
-            self.logger.debug(f"Timeframe değiştirme atlandı: {str(e)}")
+            self.logger.debug(f"Timeframe değiştirme (Keyboard) hatası: {str(e)}")
         
         return False
