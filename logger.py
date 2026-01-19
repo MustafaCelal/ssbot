@@ -119,28 +119,6 @@ class BotLogger:
                 f"Hata: {error} | Retry: {retry_count}"
             )
     
-    def batch_summary(
-        self, 
-        total: int, 
-        success: int, 
-        failed: int,
-        duration_seconds: float
-    ) -> None:
-        """
-        Batch işlem özetini loglar.
-        
-        Args:
-            total: Toplam sembol
-            success: Başarılı sayısı
-            failed: Başarısız sayısı
-            duration_seconds: Toplam süre
-        """
-        self.info("=" * 60)
-        self.info("BATCH İŞLEM ÖZETİ")
-        self.info(f"Toplam: {total} | Başarılı: {success} | Başarısız: {failed}")
-        self.info(f"Başarı Oranı: {(success/total)*100:.1f}%")
-        self.info(f"Süre: {duration_seconds:.1f} saniye")
-        self.info("=" * 60)
 
 
 def get_logger(log_level: int = logging.INFO) -> BotLogger:

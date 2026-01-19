@@ -28,28 +28,17 @@ def parse_arguments() -> argparse.Namespace:
   # Tekli screenshot
   python main.py --symbol BTCUSDT --exchange BINANCE --timeframe 1D
   
-  # Batch screenshot
-  python main.py --symbols BTCUSDT,ETHUSDT,SOLUSDT --exchange BINANCE
-  
-  # Multi-timeframe
-  python main.py --symbol BTCUSDT --exchange BINANCE --timeframes 1H,4H,1D
-  
   # Light theme, headed mod
   python main.py --symbol AAPL --exchange NASDAQ --theme light --no-headless
         """
     )
     
-    # Sembol seçenekleri
-    symbol_group = parser.add_mutually_exclusive_group(required=True)
-    symbol_group.add_argument(
+    # Sembol seçeneği
+    parser.add_argument(
         "--symbol", "-s",
         type=str,
-        help="Tek sembol (ör: BTCUSDT)"
-    )
-    symbol_group.add_argument(
-        "--symbols",
-        type=str,
-        help="Çoklu sembol (virgülle ayrılmış, ör: BTCUSDT,ETHUSDT)"
+        required=True,
+        help="Sembol adı (ör: BTCUSDT)"
     )
     
     # Borsa
@@ -67,12 +56,6 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default="1D",
         help="Zaman dilimi (ör: 1H, 4H, 1D, 1W)"
-    )
-    
-    parser.add_argument(
-        "--timeframes",
-        type=str,
-        help="Çoklu timeframe (virgülle ayrılmış, ör: 1H,4H,1D)"
     )
     
     # Görünüm
@@ -118,65 +101,17 @@ def run_single_screenshot(bot: TradingViewBot, args: argparse.Namespace) -> int:
     """
     logger = get_logger()
     
-    if args.timeframes:
-        # Multi-timeframe
-        timeframes = [tf.strip() for tf in args.timeframes.split(",")]
-        logger.info(f"Multi-timeframe screenshot: {args.symbol} @ {timeframes}")
-        
-        results = bot.batch_screenshot_multi_timeframe(
-            symbols=[args.symbol],
-            exchange=args.exchange,
-            timeframes=timeframes
-        )
-        
-        # Sonuçları kontrol et
-        all_success = all(
-            success for tf_results in results.values() 
-            for success, _ in tf_results.values()
-        )
-    else:
-        # Single timeframe
-        success, filepath = bot.take_screenshot(
-            symbol=args.symbol,
-            exchange=args.exchange,
-            timeframe=args.timeframe
-        )
-        all_success = success
-        
-        if success:
-            logger.info(f"Screenshot kaydedildi: {filepath}")
+    # Single timeframe
+    success, filepath = bot.take_screenshot(
+        symbol=args.symbol,
+        exchange=args.exchange,
+        timeframe=args.timeframe
+    )
     
-    return 0 if all_success else 1
-
-
-def run_batch_screenshot(bot: TradingViewBot, args: argparse.Namespace) -> int:
-    """
-    Batch screenshot alır.
+    if success:
+        logger.info(f"Screenshot kaydedildi: {filepath}")
     
-    Returns:
-        Exit code
-    """
-    logger = get_logger()
-    
-    symbols = [s.strip() for s in args.symbols.split(",")]
-    logger.info(f"Batch screenshot: {len(symbols)} sembol")
-    
-    if args.timeframes:
-        timeframes = [tf.strip() for tf in args.timeframes.split(",")]
-        results = bot.batch_screenshot_multi_timeframe(
-            symbols=symbols,
-            exchange=args.exchange,
-            timeframes=timeframes
-        )
-    else:
-        results = bot.batch_screenshot(
-            symbols=symbols,
-            exchange=args.exchange,
-            timeframe=args.timeframe
-        )
-    
-    stats = bot.get_stats()
-    return 0 if stats["failed"] == 0 else 1
+    return 0 if success else 1
 
 
 def main() -> int:
@@ -198,10 +133,7 @@ def main() -> int:
             login_mode=args.login
         ) as bot:
             
-            if args.symbol:
-                return run_single_screenshot(bot, args)
-            else:
-                return run_batch_screenshot(bot, args)
+            return run_single_screenshot(bot, args)
                 
     except KeyboardInterrupt:
         logger.warning("İşlem kullanıcı tarafından iptal edildi.")
