@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TradingView Screenshot Bot - Main Entry Point
+ChartCapture Pro - Main Entry Point
 CLI arayüzü ve örnek kullanımlar.
 """
 
@@ -23,7 +23,7 @@ def parse_arguments() -> argparse.Namespace:
         Parsed arguments
     """
     parser = argparse.ArgumentParser(
-        description="TradingView Screenshot Bot - Otomatik chart screenshot aracı",
+        description="ChartCapture Pro - Otomatik chart screenshot aracı",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Örnekler:

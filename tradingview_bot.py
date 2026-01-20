@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Main Bot Class
+ChartCapture Pro - Main Bot Class
 OOP tabanlı ana kontrol sınıfı.
 """
 
@@ -30,7 +30,7 @@ from utils import (
 
 class TradingViewBot:
     """
-    TradingView Screenshot Bot ana sınıfı.
+    ChartCapture Pro ana sınıfı.
     Guest ve Login mod desteği ile screenshot alma.
     """
     
@@ -91,7 +91,7 @@ class TradingViewBot:
             
         try:
             self.logger.info("=" * 60)
-            self.logger.info("TradingView Screenshot Bot başlatılıyor...")
+            self.logger.info("ChartCapture Pro başlatılıyor...")
             self.logger.info(f"Mod: {'Login' if self.login_mode else 'Guest'}")
             self.logger.info(f"Theme: {self.theme}")
             self.logger.info(f"Headless: {self.headless}")
@@ -237,7 +237,7 @@ class TradingViewBot:
         self._is_initialized = False
         self._is_logged_in = False
         
-        self.logger.info("TradingView Bot kapatıldı.")
+        self.logger.info("ChartCapture Pro kapatıldı.")
     
     def __enter__(self):
         """Context manager desteği."""

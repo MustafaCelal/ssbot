@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Browser Manager
+ChartCapture Pro - Browser Manager
 WebDriver lifecycle ve anti-bot önlemleri.
 """
 

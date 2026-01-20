@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Utility Functions
+ChartCapture Pro - Utility Functions
 Yardımcı fonksiyonlar.
 """
 

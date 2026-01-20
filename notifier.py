@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Notification Module
+ChartCapture Pro - Notification Module
 Bildirim gönderme sistemini soyutlayan modül.
 """
 

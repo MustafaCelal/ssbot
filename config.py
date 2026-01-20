@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Configuration Module
+ChartCapture Pro - Configuration Module
 Tüm yapılandırılabilir parametreler ve sabitler.
 """
 

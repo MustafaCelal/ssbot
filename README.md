@@ -1,4 +1,4 @@
-# 🤖 TradingView Screenshot Bot (SSBot)
+# 🤖 ChartCapture Pro (SSBot)
 
 [![Python Support](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Selenium](https://img.shields.io/badge/selenium-4.15+-green.svg)](https://www.selenium.dev/)

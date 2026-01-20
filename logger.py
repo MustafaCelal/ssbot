@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Logger Module
+ChartCapture Pro - Logger Module
 Dosya ve konsol logging sistemi.
 """
 
@@ -36,7 +36,7 @@ class BotLogger:
             return
             
         self._initialized = True
-        self.logger = logging.getLogger("TradingViewBot")
+        self.logger = logging.getLogger("ChartCapturePro")
         self.logger.setLevel(log_level)
         
         # Önceki handler'ları temizle

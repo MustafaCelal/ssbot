@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Screenshot Engine
+ChartCapture Pro - Screenshot Engine
 Screenshot alma mantığı ve retry mekanizması.
 """
 
@@ -352,7 +352,7 @@ class ScreenshotEngine:
                 # Snapshot butonu başarısız olursa fallback
                 if not success:
                     self.logger.warning("⚠️ CLEAN MODE BAŞARISIZ! (Snapshot butonu bulunamadı veya yanit vermedi)")
-                    notifier.notify("TradingView Bot", f"⚠️ {symbol} için Clean Mode başarısız, Quick Mode'a geçiliyor...")
+                    notifier.notify("ChartCapture Pro", f"⚠️ {symbol} için Clean Mode başarısız, Quick Mode'a geçiliyor...")
                     self.logger.info("ℹ️ QUICK MODE (Direct Capture) otomatik fallback olarak başlatılıyor...")
                     success = self._capture_chart_area(filepath)
                     if success:
@@ -364,7 +364,7 @@ class ScreenshotEngine:
                     symbol, exchange, True, filepath, retry_count=retry_count
                 )
                 if retry_count == 0: # Sadece ana döngüde bildirim gönder
-                    notifier.notify("TradingView Bot", f"✅ Screenshot başarıyla alındı: {symbol}")
+                    notifier.notify("ChartCapture Pro", f"✅ Screenshot başarıyla alındı: {symbol}")
                 return (True, filepath, "")
             else:
                 raise Exception("Screenshot dosyası oluşturulamadı")
