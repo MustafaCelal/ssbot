@@ -39,7 +39,9 @@ class TradingViewBot:
         headless: bool = True,
         theme: str = "dark",
         output_dir: str = None,
-        login_mode: bool = False
+        login_mode: bool = False,
+        width: int = 1920,
+        height: int = 1080
     ):
         """
         TradingViewBot'u başlatır.
@@ -49,11 +51,15 @@ class TradingViewBot:
             theme: Tema (light/dark)
             output_dir: Screenshot çıktı klasörü
             login_mode: Login modda çalıştır
+            width: Browser genişliği
+            height: Browser yüksekliği
         """
         self.headless = headless
         self.theme = theme.lower() if theme else "dark"
         self.output_dir = output_dir or PathConfig.SCREENSHOT_DIR
         self.login_mode = login_mode
+        self.width = width
+        self.height = height
         
         self.logger = get_logger()
         self.browser: Optional[BrowserManager] = None
@@ -92,7 +98,11 @@ class TradingViewBot:
             self.logger.info("=" * 60)
             
             # Browser'ı başlat
-            self.browser = BrowserManager(headless=self.headless)
+            self.browser = BrowserManager(
+                headless=self.headless,
+                width=self.width,
+                height=self.height
+            )
             self.browser.start()
             
             # Screenshot engine'i oluştur
@@ -166,7 +176,8 @@ class TradingViewBot:
         self,
         symbol: str,
         exchange: str = "BINANCE",
-        timeframe: str = "1D"
+        timeframe: str = "1D",
+        mode: str = "quick"
     ) -> Tuple[bool, str]:
         """
         Tek sembol için screenshot alır.
@@ -175,6 +186,7 @@ class TradingViewBot:
             symbol: Sembol adı (ör: BTCUSDT)
             exchange: Borsa adı
             timeframe: Zaman dilimi
+            mode: Screenshot modu (quick/clean)
             
         Returns:
             Tuple(success, filepath)
@@ -197,7 +209,8 @@ class TradingViewBot:
             exchange=exchange,
             timeframe=timeframe,
             theme=self.theme,
-            output_dir=self.output_dir
+            output_dir=self.output_dir,
+            mode=mode
         )
         
         if success:

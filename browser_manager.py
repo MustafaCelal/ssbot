@@ -30,7 +30,9 @@ class BrowserManager:
         self,
         headless: bool = True,
         user_agent: str = None,
-        disable_images: bool = False
+        disable_images: bool = False,
+        width: int = 1920,
+        height: int = 1080
     ):
         """
         BrowserManager'ı başlatır.
@@ -39,10 +41,14 @@ class BrowserManager:
             headless: Headless modda çalıştır
             user_agent: Özel user-agent (None ise random seçilir)
             disable_images: Görselleri devre dışı bırak (hızlandırma için)
+            width: Pencere genişliği
+            height: Pencere yüksekliği
         """
         self.headless = headless
         self.user_agent = user_agent or get_random_user_agent()
         self.disable_images = disable_images
+        self.width = width
+        self.height = height
         self.driver: Optional[webdriver.Chrome] = None
         self.logger = get_logger()
         
@@ -61,7 +67,7 @@ class BrowserManager:
         
         # Window size
         options.add_argument(
-            f"--window-size={SeleniumConfig.WINDOW_WIDTH},{SeleniumConfig.WINDOW_HEIGHT}"
+            f"--window-size={self.width},{self.height}"
         )
         
         # User agent
@@ -307,14 +313,22 @@ class BrowserManager:
             '[aria-label="Close"]',
         ]
         
+        # HIZLANDIRMA: Popup kontrolü için implicit wait'i geçici olarak kapat
+        self.driver.implicitly_wait(0.1)
+        
         for selector in popup_selectors:
             try:
-                element = self.driver.find_element(By.CSS_SELECTOR, selector)
-                if element and element.is_displayed():
-                    element.click()
-                    self.logger.debug(f"Popup kapatıldı: {selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    if element.is_displayed():
+                        element.click()
+                        self.logger.debug(f"Popup kapatıldı: {selector}")
+                        break
             except Exception:
                 pass
+                
+        # Implicit wait'i eski haline getir
+        self.driver.implicitly_wait(SeleniumConfig.IMPLICIT_WAIT)
     
     def rotate_user_agent(self) -> None:
         """

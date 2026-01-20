@@ -38,6 +38,15 @@ class Theme(Enum):
 
 
 # ========================
+# SCREENSHOT MODES
+# ========================
+class ScreenshotMode(Enum):
+    """Screenshot alma yöntemleri."""
+    QUICK = "quick"   # Direkt element capture (Hızlı ve gizli)
+    CLEAN = "clean"   # TradingView snapshot butonu (Resmi ve temiz)
+
+
+# ========================
 # SUPPORTED EXCHANGES
 # ========================
 SUPPORTED_EXCHANGES: List[str] = [
@@ -87,8 +96,8 @@ class SeleniumConfig:
     ELEMENT_WAIT_TIMEOUT: int = 15
     
     # Screenshot ayarları
-    MIN_RANDOM_DELAY: float = 2.0
-    MAX_RANDOM_DELAY: float = 5.0
+    MIN_RANDOM_DELAY: float = 0.5
+    MAX_RANDOM_DELAY: float = 1.5
     
     # Retry ayarları
     MAX_RETRIES: int = 3

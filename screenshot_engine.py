@@ -24,6 +24,7 @@ from browser_manager import BrowserManager
 from config import SeleniumConfig, Selectors, TradingViewURLs, PathConfig
 from logger import get_logger
 from utils import random_delay, get_screenshot_path, ensure_directory
+from notifier import notifier
 
 
 class ScreenshotEngine:
@@ -72,7 +73,8 @@ class ScreenshotEngine:
                 pass
             
             # Ekstra bekleme (verilerin dolması ve render için önemli)
-            time.sleep(5)
+            # 5 saniyeden 1.5 saniyeye düşürüldü
+            time.sleep(1.5)
             
             self.logger.debug("Chart yükleme kontrolü tamamlandı.")
             return True
@@ -237,22 +239,33 @@ class ScreenshotEngine:
             Başarılı mı
         """
         try:
+            # HIZLANDIRMA: Implicit wait süresini geçici olarak düşür
+            self.driver.implicitly_wait(0.5)
+            
             # Önce chart container'ı bul
             chart_selectors = [
                 '.chart-container',
                 '.chart-markup-table',
-                '#chart-area',
                 '.layout__area--center',
+                '#chart-area',
+                'canvas'  # Son çare
             ]
             
             chart_element = None
             for selector in chart_selectors:
                 try:
-                    chart_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for el in elements:
+                        if el.is_displayed() and el.size['width'] > 100:
+                            chart_element = el
+                            break
                     if chart_element:
                         break
-                except NoSuchElementException:
+                except Exception:
                     continue
+            
+            # Implicit wait'i eski haline getir
+            self.driver.implicitly_wait(SeleniumConfig.IMPLICIT_WAIT)
             
             if chart_element:
                 # Element screenshot
@@ -276,7 +289,8 @@ class ScreenshotEngine:
         timeframe: str = "1D",
         theme: str = "dark",
         output_dir: str = None,
-        retry_count: int = 0
+        retry_count: int = 0,
+        mode: str = "quick"
     ) -> Tuple[bool, str, str]:
         """
         Belirtilen sembol için screenshot alır.
@@ -288,6 +302,7 @@ class ScreenshotEngine:
             theme: Tema (light/dark)
             output_dir: Çıktı klasörü
             retry_count: Mevcut retry sayısı
+            mode: Screenshot modu (quick/clean)
             
         Returns:
             Tuple(success, filepath, error_message)
@@ -296,9 +311,9 @@ class ScreenshotEngine:
         error_msg = ""
         
         try:
-            # URL oluştur (zaman dilimini URL parametresi olarak ekledik)
+            # URL oluştur
             url = TradingViewURLs.get_symbol_url(symbol, exchange, timeframe, theme)
-            self.logger.info(f"Screenshot alınıyor: {exchange}:{symbol} ({timeframe})")
+            self.logger.info(f"Screenshot alınıyor [{mode}]: {exchange}:{symbol} ({timeframe})")
             
             # Sayfaya git
             if not self.browser.navigate_to(url):
@@ -314,36 +329,42 @@ class ScreenshotEngine:
             # Timeframe değiştir (gerekirse)
             self._set_timeframe(timeframe)
             
-            # Overlays temizle (onboarding tooltips vb.)
+            # Overlays temizle
             self.browser.clear_overlays()
             
-            # Random bekleme (anti-bot)
+            # Random bekleme
             delay = random_delay()
             self.logger.debug(f"Random bekleme: {delay:.1f}s")
             
-            # Snapshot al
-            if self._click_snapshot_button():
-                time.sleep(1)
-                
-                # Dialog açıldı mı kontrol et
-                if self._wait_for_snapshot_dialog(timeout=5):
-                    # Dialog üzerinden indir
-                    if not self._download_snapshot(filepath):
-                        # Fallback
-                        self._close_dialogs()
-                        self._capture_chart_area(filepath)
-                else:
-                    # Direkt chart screenshot
-                    self._capture_chart_area(filepath)
+            success = False
+            
+            if mode == "quick":
+                # HIZLI VE GİZLİ YÖNTEM: Direkt element screenshot
+                success = self._capture_chart_area(filepath)
             else:
-                # Buton bulunamadı, direkt screenshot
-                self._capture_chart_area(filepath)
+                # TEMİZ YÖNTEM: TradingView UI snapshot
+                self.logger.debug("Clean mode (native UI snapshot) kullanılıyor...")
+                if self._click_snapshot_button():
+                    time.sleep(0.5)
+                    if self._wait_for_snapshot_dialog(timeout=5):
+                        success = self._download_snapshot(filepath)
+                
+                # Snapshot butonu başarısız olursa fallback
+                if not success:
+                    self.logger.warning("⚠️ CLEAN MODE BAŞARISIZ! (Snapshot butonu bulunamadı veya yanit vermedi)")
+                    notifier.notify("TradingView Bot", f"⚠️ {symbol} için Clean Mode başarısız, Quick Mode'a geçiliyor...")
+                    self.logger.info("ℹ️ QUICK MODE (Direct Capture) otomatik fallback olarak başlatılıyor...")
+                    success = self._capture_chart_area(filepath)
+                    if success:
+                        self.logger.info("✅ Fallback başarılı: Ekran görüntüsü Quick Mode ile yakalandı.")
             
             # Dosya oluştu mu kontrol et
-            if os.path.exists(filepath):
+            if success and os.path.exists(filepath):
                 self.logger.screenshot_result(
                     symbol, exchange, True, filepath, retry_count=retry_count
                 )
+                if retry_count == 0: # Sadece ana döngüde bildirim gönder
+                    notifier.notify("TradingView Bot", f"✅ Screenshot başarıyla alındı: {symbol}")
                 return (True, filepath, "")
             else:
                 raise Exception("Screenshot dosyası oluşturulamadı")
@@ -359,7 +380,7 @@ class ScreenshotEngine:
                 self.logger.info(f"Retry deneniyor... ({retry_count + 1}/{SeleniumConfig.MAX_RETRIES})")
                 time.sleep(SeleniumConfig.RETRY_DELAY)
                 return self.take_screenshot(
-                    symbol, exchange, timeframe, theme, output_dir, retry_count + 1
+                    symbol, exchange, timeframe, theme, output_dir, retry_count + 1, mode=mode
                 )
             
             return (False, "", error_msg)
@@ -388,7 +409,7 @@ class ScreenshotEngine:
 
             actions = ActionChains(self.driver)
             actions.send_keys(timeframe).send_keys(Keys.ENTER).perform()
-            time.sleep(2) # Yükleme için bekle
+            time.sleep(1) # Yükleme için bekle (2s -> 1s)
             
             # Alternatif: Menü üzerinden (Eski yöntem - yedek olarak dursun)
             # tf_button = self.driver.find_element(By.CSS_SELECTOR, '[data-name="time-interval-menu-button"]')

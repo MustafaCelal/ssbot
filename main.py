@@ -6,6 +6,8 @@ CLI arayüzü ve örnek kullanımlar.
 
 import argparse
 import sys
+import time
+import schedule
 from typing import List
 
 from tradingview_bot import TradingViewBot
@@ -74,6 +76,20 @@ def parse_arguments() -> argparse.Namespace:
         help="Browser'ı görünür modda çalıştır"
     )
     
+    # Çözünürlük
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=1920,
+        help="Browser genişliği (default: 1920)"
+    )
+    parser.add_argument(
+        "--height",
+        type=int,
+        default=1080,
+        help="Browser yüksekliği (default: 1080)"
+    )
+    
     # Login
     parser.add_argument(
         "--login",
@@ -87,6 +103,23 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default=None,
         help="Screenshot çıktı klasörü (default: ./screenshots)"
+    )
+
+    # Screenshot Modu
+    parser.add_argument(
+        "--mode", "-m",
+        type=str,
+        choices=["quick", "clean"],
+        default="quick",
+        help="Screenshot alma modu: quick (hızlı/gizli), clean (resmi snapshot) (default: quick)"
+    )
+
+    # Otomasyon
+    parser.add_argument(
+        "--interval", "-i",
+        type=int,
+        default=0,
+        help="Dakika cinsinden periyodik çalıştırma (0: sadece bir kez çalıştır) (default: 0)"
     )
     
     return parser.parse_args()
@@ -105,7 +138,8 @@ def run_single_screenshot(bot: TradingViewBot, args: argparse.Namespace) -> int:
     success, filepath = bot.take_screenshot(
         symbol=args.symbol,
         exchange=args.exchange,
-        timeframe=args.timeframe
+        timeframe=args.timeframe,
+        mode=args.mode
     )
     
     if success:
@@ -130,10 +164,25 @@ def main() -> int:
             headless=not args.no_headless,
             theme=args.theme,
             output_dir=args.output,
-            login_mode=args.login
+            login_mode=args.login,
+            width=args.width,
+            height=args.height
         ) as bot:
             
-            return run_single_screenshot(bot, args)
+            if args.interval > 0:
+                logger.info(f"Oto-screenshot başlatıldı. Her {args.interval} dakikada bir çalışacak.")
+                
+                # İlk SS'i hemen al
+                run_single_screenshot(bot, args)
+                
+                # Schedule kur
+                schedule.every(args.interval).minutes.do(run_single_screenshot, bot, args)
+                
+                while True:
+                    schedule.run_pending()
+                    time.sleep(1)
+            else:
+                return run_single_screenshot(bot, args)
                 
     except KeyboardInterrupt:
         logger.warning("İşlem kullanıcı tarafından iptal edildi.")
