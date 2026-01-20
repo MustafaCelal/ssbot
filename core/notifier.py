@@ -1,12 +1,12 @@
 """
-TradingView Screenshot Bot - Notification Module
+ChartCapture Pro - Notification Module
 Bildirim gönderme sistemini soyutlayan modül.
 """
 
 import os
 from abc import ABC, abstractmethod
 from typing import List
-from logger import get_logger
+from .logger import get_logger
 
 class NotificationProvider(ABC):
     """Bildirim servisleri için taban sınıf."""

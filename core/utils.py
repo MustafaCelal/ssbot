@@ -1,5 +1,5 @@
 """
-TradingView Screenshot Bot - Utility Functions
+ChartCapture Pro - Utility Functions
 Yardımcı fonksiyonlar.
 """
 
@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from typing import Optional
 
-from config import (
+from .config import (
     PathConfig,
     SeleniumConfig,
     Timeframe,
