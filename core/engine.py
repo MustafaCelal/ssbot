@@ -20,11 +20,11 @@ from selenium.common.exceptions import (
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 
-from browser_manager import BrowserManager
-from config import SeleniumConfig, Selectors, TradingViewURLs, PathConfig
-from logger import get_logger
-from utils import random_delay, get_screenshot_path, ensure_directory
-from notifier import notifier
+from .browser import BrowserManager
+from .config import SeleniumConfig, Selectors, TradingViewURLs, PathConfig
+from .logger import get_logger
+from .utils import random_delay, get_screenshot_path, ensure_directory
+from .notifier import notifier
 
 
 class ScreenshotEngine:

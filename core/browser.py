@@ -15,9 +15,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 
-from config import SeleniumConfig, USER_AGENTS, Selectors
-from logger import get_logger
-from utils import get_random_user_agent
+from .config import SeleniumConfig, USER_AGENTS, Selectors
+from .logger import get_logger
+from .utils import get_random_user_agent
 
 
 class BrowserManager:

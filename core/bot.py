@@ -7,9 +7,9 @@ import time
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
-from browser_manager import BrowserManager
-from screenshot_engine import ScreenshotEngine
-from config import (
+from .browser import BrowserManager
+from .engine import ScreenshotEngine
+from .config import (
     SeleniumConfig, 
     Theme, 
     PathConfig,
@@ -17,8 +17,8 @@ from config import (
     LoginConfig,
     Selectors
 )
-from logger import get_logger
-from utils import (
+from .logger import get_logger
+from .utils import (
     random_delay, 
     ensure_directory, 
     validate_symbol, 
@@ -28,7 +28,7 @@ from utils import (
 )
 
 
-class TradingViewBot:
+class ChartCapture:
     """
     ChartCapture Pro ana sınıfı.
     Guest ve Login mod desteği ile screenshot alma.
@@ -44,7 +44,7 @@ class TradingViewBot:
         height: int = 1080
     ):
         """
-        TradingViewBot'u başlatır.
+        ChartCapture'i başlatır.
         
         Args:
             headless: Headless modda çalıştır

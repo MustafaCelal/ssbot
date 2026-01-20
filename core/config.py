@@ -145,8 +145,8 @@ class TradingViewURLs:
 class PathConfig:
     """Dosya yolları yapılandırması."""
     
-    # Proje kök dizini
-    PROJECT_ROOT: str = os.path.dirname(os.path.abspath(__file__))
+    # Proje kök dizini (bir seviye yukarı: core -> root)
+    PROJECT_ROOT: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     # Screenshot klasörü
     SCREENSHOT_DIR: str = os.path.join(PROJECT_ROOT, "screenshots")

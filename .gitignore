@@ -20,22 +20,43 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.mypy_cache/
 
 # Virtual Environment
 venv/
 ENV/
+.venv/
 
 # Project Specific
 logs/
 screenshots/
+*.log
 .env
+.env.*
+
+# Streamlit
+.streamlit/
+
+# UI / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+.project
+.pydevproject
+.settings/
 
 # OS
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
