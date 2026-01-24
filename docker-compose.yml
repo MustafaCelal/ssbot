@@ -15,5 +15,21 @@ services:
       - TV_PASSWORD=${TV_PASSWORD}
       # Botun headless modda çalıştığından emin olmak için:
       - PYTHONIOENCODING=utf-8
-
     command: python main.py --symbol BTCUSDT --timeframe 1H --mode quick
+
+  ui:
+    build: .
+    container_name: ssbot_ui
+    shm_size: '2gb'
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - TV_USERNAME=${TV_USERNAME}
+      - TV_PASSWORD=${TV_PASSWORD}
+      - PYTHONIOENCODING=utf-8
+    # Streamlit'in hot-reload özelliğini ve Docker üzerinde çalışmasını sağlıyoruz
+    command: streamlit run ui/app.py --server.address 0.0.0.0 --server.port 8501
