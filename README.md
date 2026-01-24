@@ -54,6 +54,44 @@
 
 ---
 
+## 🐳 Docker Desteği
+
+Uygulamayı Docker kullanarak izole bir ortamda, bağımlılık (Chrome/ChromeDriver) derdi olmadan çalıştırabilirsiniz.
+
+### 1. Docker Compose ile Çalıştırma
+En kolay yöntem `docker-compose` kullanmaktır. `docker-compose.yml` dosyası, screenshot ve logların kalıcı olması için gerekli volume tanımlarını içerir.
+
+**İmajı Oluşturun ve Yardım Menüsünü Görün:**
+```bash
+docker-compose build
+docker-compose run --rm ssbot python main.py --help
+```
+
+**Örnek Kullanım (BTCUSDT 1 Saatlik):**
+```bash
+docker-compose run --rm ssbot python main.py --symbol BTCUSDT --exchange BINANCE --timeframe 1H
+```
+
+### 2. Sadece Docker ile Çalıştırma
+```bash
+# İmaj oluşturma
+docker build -t ssbot .
+
+# Çalıştırma (Volume ve Env mapping ile)
+docker run --rm \
+  --shm-size=2gb \
+  -v $(pwd)/screenshots:/app/screenshots \
+  -v $(pwd)/logs:/app/logs \
+  -e TV_USERNAME=kullanici_adiniz \
+  -e TV_PASSWORD=sifreniz \
+  ssbot python main.py --symbol BTCUSDT --timeframe 1D
+```
+
+> [!TIP]
+> Docker üzerinde çalışırken `shm_size: '2gb'` ayarı ve `--disable-dev-shm-usage` argümanı (kod tarafında ekli) Chrome'un stabil çalışması için kritik öneme sahiptir. Bot, Docker içerisinde varsayılan olarak `headless` modda çalışacak şekilde yapılandırılmıştır.
+
+---
+
 ## 🚀 Kullanım
 
 Botu CLI üzerinden kolayca yönetebilirsiniz.
@@ -174,7 +212,7 @@ Bot, modüler bir yapı üzerine inşa edilmiştir:
 - [ ] 📱 Telegram Bot entegrasyonu.
 - [ ] 📧 E-posta gönderim desteği.
 - [ ] 📄 Çoklu sembol listesi desteği (Batch processing).
-- [ ] 🐳 Docker Container desteği.
+- [x] 🐳 Docker Container desteği.
 
 ---
 

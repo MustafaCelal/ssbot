@@ -4,6 +4,7 @@ WebDriver lifecycle ve anti-bot önlemleri.
 """
 
 import random
+import os
 from typing import Optional
 
 from selenium import webdriver
@@ -109,7 +110,16 @@ class BrowserManager:
         
         # Dil ayarı
         options.add_argument("--lang=en-US")
+
+        # Docker içinde "GPU" ve "Software Rasterizer" hatalarını tamamen kesmek için
+        options.add_argument("--disable-software-rasterizer")
         
+        # Docker/Chromium support
+        chrome_bin = os.environ.get("CHROME_BIN")
+        if chrome_bin:
+            self.logger.debug(f"Chrome bin ayarlanıyor: {chrome_bin}")
+            options.binary_location = chrome_bin
+            
         return options
     
     def start(self) -> webdriver.Chrome:
@@ -126,7 +136,16 @@ class BrowserManager:
             self.logger.info(f"Chrome WebDriver başlatılıyor... (Headless: {self.headless})")
             
             options = self._get_chrome_options()
-            service = Service(ChromeDriverManager().install())
+            
+            # Docker/Chromium Driver path
+            driver_path = os.environ.get("CHROMEDRIVER_PATH") 
+            
+            if driver_path:
+                self.logger.info(f"Özel ChromeDriver kullanılıyor: {driver_path}")
+                service = Service(executable_path=driver_path)
+            else:
+                self.logger.info("ChromeDriver otomatik yükleniyor...")
+                service = Service(ChromeDriverManager().install())
             
             self.driver = webdriver.Chrome(service=service, options=options)
             
@@ -156,27 +175,63 @@ class BrowserManager:
         self.driver.execute_cdp_cmd(
             "Page.addScriptToEvaluateOnNewDocument",
             {
-                "source": """
+              "source": """
+                    // Standart WebDriver Gizleme
                     Object.defineProperty(navigator, 'webdriver', {
                         get: () => undefined
                     });
-                    
-                    // Chrome detection'ı bypass
+
+                    // Platform ve Donanım Maskeleme
+                    Object.defineProperty(navigator, 'platform', {
+                        get: () => 'Win32'
+                    });
+
+                    Object.defineProperty(navigator, 'maxTouchPoints', {
+                        get: () => 1
+                    });
+
+                    Object.defineProperty(navigator, 'hardwareConcurrency', {
+                        get: () => 8
+                    });
+
+                    // User Agent Maskeleme (Headless Chrome ibaresini temizle)
+                    const originalUserAgent = navigator.userAgent;
+                    const maskedUserAgent = originalUserAgent.replace(/HeadlessChrome/g, 'Chrome');
+                    Object.defineProperty(navigator, 'userAgent', {
+                        get: () => maskedUserAgent
+                    });
+
+                    // Chrome Detection Bypass (Plugins & Languages)
                     Object.defineProperty(navigator, 'plugins', {
                         get: () => [1, 2, 3, 4, 5]
                     });
-                    
+
                     Object.defineProperty(navigator, 'languages', {
                         get: () => ['en-US', 'en']
                     });
-                    
-                    // Permissions API'yi mask'le
+
+                    // WebGL 1 & 2 Maskeleme (Grafik Kartı Bilgisi)
+                    const maskWebGL = (context) => {
+                        const getParam = context.prototype.getParameter;
+                        context.prototype.getParameter = function(parameter) {
+                            if (parameter === 37445) return 'Intel Inc.'; // UNMASKED_VENDOR_WEBGL
+                            if (parameter === 37446) return 'Intel(R) Iris(R) Xe Graphics'; // UNMASKED_RENDERER_WEBGL
+                            return getParam.apply(this, arguments);
+                        };
+                    };
+
+                    // Permissions API Maskeleme
                     const originalQuery = window.navigator.permissions.query;
                     window.navigator.permissions.query = (parameters) => (
                         parameters.name === 'notifications' ?
                             Promise.resolve({ state: Notification.permission }) :
                             originalQuery(parameters)
                     );
+
+                    // Chrome Runtime Bypass
+                    window.chrome = {
+                        runtime: {}
+                    };
                 """
             }
         )

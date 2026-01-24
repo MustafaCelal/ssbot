@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Project specific
+logs/*
+screenshots/*
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

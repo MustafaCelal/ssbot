@@ -1,0 +1,19 @@
+services:
+  ssbot:
+    build: .
+    container_name: ssbot
+    shm_size: '2gb'
+    # Sürekli çalışan bir bot ise otomatik restart ekle
+    restart: on-failure
+    volumes:
+      - ./screenshots:/app/screenshots
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TV_USERNAME=${TV_USERNAME}
+      - TV_PASSWORD=${TV_PASSWORD}
+      # Botun headless modda çalıştığından emin olmak için:
+      - PYTHONIOENCODING=utf-8
+
+    command: python main.py --symbol BTCUSDT --timeframe 1H --mode quick
