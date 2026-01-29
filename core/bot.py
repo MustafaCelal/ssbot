@@ -4,6 +4,7 @@ OOP tabanlı ana kontrol sınıfı.
 """
 
 import time
+import threading
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
@@ -32,6 +33,7 @@ class ChartCapture:
     """
     ChartCapture Pro ana sınıfı.
     Guest ve Login mod desteği ile screenshot alma.
+    Thread-safe screenshot alımı için Lock mekanizması içerir.
     """
     
     def __init__(
@@ -45,14 +47,6 @@ class ChartCapture:
     ):
         """
         ChartCapture'i başlatır.
-        
-        Args:
-            headless: Headless modda çalıştır
-            theme: Tema (light/dark)
-            output_dir: Screenshot çıktı klasörü
-            login_mode: Login modda çalıştır
-            width: Browser genişliği
-            height: Browser yüksekliği
         """
         self.headless = headless
         self.theme = theme.lower() if theme else "dark"
@@ -64,6 +58,7 @@ class ChartCapture:
         self.logger = get_logger()
         self.browser: Optional[BrowserManager] = None
         self.screenshot_engine: Optional[ScreenshotEngine] = None
+        self._lock = threading.Lock()
         
         self._is_initialized = False
         self._is_logged_in = False
@@ -82,9 +77,6 @@ class ChartCapture:
     def initialize(self) -> bool:
         """
         Bot'u başlatır ve browser'ı açar.
-        
-        Returns:
-            Başarılı mı
         """
         if self._is_initialized:
             return True
@@ -125,9 +117,6 @@ class ChartCapture:
     def _login(self) -> bool:
         """
         TradingView'a giriş yapar.
-        
-        Returns:
-            Başarılı mı
         """
         if not LoginConfig.has_credentials():
             self.logger.warning("Login credentials bulunamadı (TV_USERNAME, TV_PASSWORD)")
@@ -180,45 +169,37 @@ class ChartCapture:
         mode: str = "quick"
     ) -> Tuple[bool, str]:
         """
-        Tek sembol için screenshot alır.
-        
-        Args:
-            symbol: Sembol adı (ör: BTCUSDT)
-            exchange: Borsa adı
-            timeframe: Zaman dilimi
-            mode: Screenshot modu (quick/clean)
-            
-        Returns:
-            Tuple(success, filepath)
+        Thread-safe screenshot alımı.
         """
-        # Başlatılmamışsa başlat
-        if not self._is_initialized:
-            if not self.initialize():
-                return (False, "")
-        
-        # Parametreleri validate et
-        symbol = validate_symbol(symbol)
-        exchange = validate_exchange(exchange)
-        timeframe = parse_timeframe(timeframe)
-        
-        self.stats["total"] += 1
-        
-        # Screenshot al
-        success, filepath, error = self.screenshot_engine.take_screenshot(
-            symbol=symbol,
-            exchange=exchange,
-            timeframe=timeframe,
-            theme=self.theme,
-            output_dir=self.output_dir,
-            mode=mode
-        )
-        
-        if success:
-            self.stats["success"] += 1
-        else:
-            self.stats["failed"] += 1
+        with self._lock:
+            # Başlatılmamışsa başlat
+            if not self._is_initialized:
+                if not self.initialize():
+                    return (False, "")
             
-        return (success, filepath)
+            # Parametreleri validate et
+            symbol = validate_symbol(symbol)
+            exchange = validate_exchange(exchange)
+            timeframe = parse_timeframe(timeframe)
+            
+            self.stats["total"] += 1
+            
+            # Screenshot al
+            success, filepath, error = self.screenshot_engine.take_screenshot(
+                symbol=symbol,
+                exchange=exchange,
+                timeframe=timeframe,
+                theme=self.theme,
+                output_dir=self.output_dir,
+                mode=mode
+            )
+            
+            if success:
+                self.stats["success"] += 1
+            else:
+                self.stats["failed"] += 1
+                
+            return (success, filepath)
     
     def get_stats(self) -> Dict:
         """İstatistikleri döndürür."""
@@ -227,7 +208,6 @@ class ChartCapture:
     def close(self) -> None:
         """
         Bot'u ve browser'ı kapatır.
-        Memory leak önleme.
         """
         if self.browser:
             self.browser.close()
@@ -240,15 +220,12 @@ class ChartCapture:
         self.logger.info("ChartCapture Pro kapatıldı.")
     
     def __enter__(self):
-        """Context manager desteği."""
         self.initialize()
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager - otomatik kapanış."""
         self.close()
         return False
     
     def __del__(self):
-        """Destructor - temizlik."""
         self.close()

@@ -202,13 +202,16 @@ python main.py --symbol BTCUSDT --login
 ```
 ssbot/
 ├── main.py                 # CLI giriş noktası
-├── config.py              # Ayarlar ve konfigürasyon
-├── screenshot_engine.py   # Ekran görüntüsü mantığı
-├── browser_manager.py     # Selenium WebDriver yönetimi
-├── notifier.py           # Bildirim sistemi
-├── requirements.txt      # Python bağımlılıkları
-├── docker-compose.yml    # Docker yapılandırması
-└── screenshots/          # Çıktı klasörü
+├── core/                   # Çekirdek mantık
+│   ├── bot.py              # Ana bot kontrolcüsü
+│   ├── browser.py          # Selenium yönetimi
+│   ├── engine.py           # Screenshot motoru
+│   ├── scheduler.py        # APScheduler entegrasyonu
+│   └── ...
+├── ui/                     # Streamlit arayüzü
+├── requirements.txt        # Bağımlılıklar
+├── docker-compose.yml      # Docker yapılandırması
+└── screenshots/            # Çıktı klasörü
 ```
 
 ---
@@ -248,11 +251,13 @@ TradingView arayüzü değişirse, `config.py` dosyasındaki `Selectors` sınıf
 - [x] Streamlit Web Arayüzü
 - [x] Docker Container Desteği
 - [x] Otomasyon ve Zamanlayıcı (APScheduler)
+- [x] Scheduler Persistence (Sayfa yenilemede korunma)
+- [x] Çoklu Bot Yönetimi (Multi-Bot Support)
+- [ ] Browser Pool (Paralel İşlem Desteği 🚀)
 - [ ] Telegram Bot Entegrasyonu
-- [ ] E-posta Gönderim Desteği
-- [ ] Çoklu Sembol Listesi (Batch Processing)
-- [ ] Otomatik Indicator Ekleme
-- [ ] Scheduler Persistence (Sayfa yenilemede korunma)
+- [ ] Discord Webhook Entegrasyonu
+- [ ] Gelişmiş Arşiv ve Filtreleme Sistemi
+- [ ] Bulut Yedekleme (S3 / Google Drive)
 
 ---
 
