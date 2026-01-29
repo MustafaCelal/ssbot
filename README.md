@@ -12,6 +12,7 @@ TradingView grafiklerini otomatik olarak yakalayan, borsa ve sembol bazlı özel
 ## ✨ Temel Özellikler
 
 - 🎯 **Hassas Yakalama:** İstediğiniz sembol, borsa ve zaman diliminde yüksek çözünürlüklü grafikler
+- ⏰ **Otomasyon ve Zamanlayıcı:** Seçilen periyotta (5dk, 15dk, 30dk, 1sa, 4sa) otomatik screenshot alma
 - 📸 **Çift Mod Desteği:**
   - `Quick Mode`: Grafik alanını doğrudan yakalar (hızlı ve sessiz)
   - `Clean Mode`: TradingView'ın resmi snapshot butonunu kullanır (ultra-temiz)
@@ -20,6 +21,7 @@ TradingView grafiklerini otomatik olarak yakalayan, borsa ve sembol bazlı özel
 - 🛡️ **Anti-Bot Gelişmişliği:** Rastgele user-agent havuzu ve stealth mode
 - 🐳 **Docker Entegrasyonu:** Tam izole çalışma ortamı ve tek komutla kurulum
 - 🎨 **Streamlit UI:** Kullanıcı dostu web arayüzü
+- 📊 **Son Yakalananlar:** Otomatik ve manuel çekimlerin geçmişini görüntüleme
 
 ---
 
@@ -245,10 +247,12 @@ TradingView arayüzü değişirse, `config.py` dosyasındaki `Selectors` sınıf
 
 - [x] Streamlit Web Arayüzü
 - [x] Docker Container Desteği
+- [x] Otomasyon ve Zamanlayıcı (APScheduler)
 - [ ] Telegram Bot Entegrasyonu
 - [ ] E-posta Gönderim Desteği
 - [ ] Çoklu Sembol Listesi (Batch Processing)
 - [ ] Otomatik Indicator Ekleme
+- [ ] Scheduler Persistence (Sayfa yenilemede korunma)
 
 ---
 

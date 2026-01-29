@@ -3,11 +3,13 @@ import sys
 import os
 from PIL import Image
 import time
+from datetime import datetime
 
 # root dizini path'e ekleyelim ki core paketini bulabilsin
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.bot import ChartCapture
+from core.scheduler import ScreenshotScheduler
 
 # Sayfa Yapılandırması
 st.set_page_config(
@@ -104,7 +106,121 @@ def initialize_bot(headless=True, theme="dark", width=1920, height=1080):
             
     return st.session_state.bot
 
+def initialize_session_state():
+    """Session state değişkenlerini başlatır."""
+    if 'scheduler' not in st.session_state:
+        st.session_state.scheduler = ScreenshotScheduler()
+    if 'is_scheduling' not in st.session_state:
+        st.session_state.is_scheduling = False
+    if 'recent_captures' not in st.session_state:
+        st.session_state.recent_captures = []
+    if 'schedule_params' not in st.session_state:
+        st.session_state.schedule_params = {}
+    if 'last_screenshot_count' not in st.session_state:
+        screenshot_dir = "./screenshots"
+        initial_count = 0
+        if os.path.exists(screenshot_dir):
+            initial_count = len([f for f in os.listdir(screenshot_dir) if f.endswith('.png')])
+        st.session_state.last_screenshot_count = initial_count
+    if 'total_scheduled_count' not in st.session_state:
+        st.session_state.total_scheduled_count = st.session_state.last_screenshot_count
+
+def on_scheduled_capture(bot, symbol, exchange, timeframe, mode):
+    """
+    Zamanlanmış screenshot callback fonksiyonu.
+    APScheduler tarafından çağrılır.
+    NOT: UI güncellemesi yapmaz, sadece screenshot alır.
+    """
+    from core.logger import get_logger
+    logger = get_logger()
+    
+    try:
+        logger.info(f"⏰ Zamanlanmış screenshot: {symbol} @ {exchange}")
+        
+        success, filepath = bot.take_screenshot(
+            symbol=symbol,
+            exchange=exchange,
+            timeframe=timeframe,
+            mode=mode
+        )
+        
+        if success and os.path.exists(filepath):
+            logger.info(f"✅ Screenshot başarılı: {filepath}")
+        else:
+            logger.error(f"❌ Screenshot başarısız: {symbol}")
+            
+    except Exception as e:
+        logger.error(f"⚠️ Zamanlanmış capture hatası: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+def load_recent_screenshots(screenshot_dir="./screenshots", limit=10):
+    """
+    Screenshot klasöründen son dosyaları yükler.
+    Bu sayede scheduled screenshots otomatik görünür.
+    """
+    try:
+        if not os.path.exists(screenshot_dir):
+            return []
+        
+        # Tüm PNG dosyalarını bul
+        screenshots = []
+        for filename in os.listdir(screenshot_dir):
+            if filename.endswith('.png'):
+                filepath = os.path.join(screenshot_dir, filename)
+                file_stat = os.stat(filepath)
+                
+                # Dosya adından bilgileri çıkar (örn: BTCUSDT_BINANCE_1H_20240120_153045.png)
+                parts = filename.replace('.png', '').split('_')
+                if len(parts) >= 3:
+                    screenshots.append({
+                        'path': filepath,
+                        'timestamp': datetime.fromtimestamp(file_stat.st_mtime),
+                        'symbol': parts[0] if len(parts) > 0 else 'N/A',
+                        'exchange': parts[1] if len(parts) > 1 else 'N/A',
+                        'timeframe': parts[2] if len(parts) > 2 else 'N/A',
+                        'size': file_stat.st_size
+                    })
+        
+        # Zamana göre sırala (en yeni önce)
+        screenshots.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return screenshots[:limit]
+        
+    except Exception as e:
+        return []
+
 def main():
+    # Session state'i başlat
+    initialize_session_state()
+    
+    # OTOMATIK YENİLEME: Scheduler aktifse klasörü kontrol et
+    if st.session_state.is_scheduling:
+        import time as time_module
+        
+        # Screenshots klasöründeki dosya sayısını kontrol et
+        screenshot_dir = "./screenshots"
+        current_count = 0
+        
+        if os.path.exists(screenshot_dir):
+            current_count = len([f for f in os.listdir(screenshot_dir) if f.endswith('.png')])
+        
+        # Yeni screenshot eklendiyse sayfayı yenile
+        if current_count > st.session_state.last_screenshot_count:
+            st.session_state.last_screenshot_count = current_count
+            st.session_state.total_scheduled_count = current_count
+            st.rerun()
+        
+        # Son sayıyı güncelle
+        st.session_state.last_screenshot_count = current_count
+        
+        # UI'da görünmesi için son kontrol zamanı
+        st.session_state.last_check_time = datetime.now().strftime("%H:%M:%S")
+        
+        # Çok sık yenileyip UI'ı kitlememek için sadece otomasyon panelinde 
+        # bir 'refresh' tetikleyicisi gibi davranacak bir mekanizma kuruyoruz.
+        # Bu satır, sayfanın en altında bir timer gibi çalışacak.
+    
     # --- TOP BAR ---
     st.markdown("""
         <div class="compact-header">
@@ -151,6 +267,66 @@ def main():
             width, height = resolutions[res_label]
             
             headless = st.toggle("Headless Mode", value=True)
+            
+            st.markdown("---")
+            
+            # ZAMANLAYICI KONTROLÜ
+            st.markdown("#### ⏰ Otomasyon")
+            
+            # Esnek interval girişi (0 = Tek seferlik)
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                interval_minutes = st.number_input(
+                    "Periyot (dakika)",
+                    min_value=0.0,
+                    max_value=1440.0,  # 24 saat
+                    value=0.0,
+                    step=0.5,
+                    format="%.1f",
+                    help="0 = Tek seferlik, >0 = Otomatik tekrar (örn: 1, 1.5, 5, 15 dakika)"
+                )
+            with col2:
+                st.caption(" ")  # Boşluk için
+                if interval_minutes == 0:
+                    st.caption("**Tek seferlik**")
+                else:
+                    st.caption(f"**{interval_minutes:.1f}** dk")
+            
+            # Durum göstergesi (sadece otomasyon aktifse)
+            if st.session_state.is_scheduling:
+                next_run = st.session_state.scheduler.get_next_run_time()
+                
+                # Sayaç ve Durum Bilgisi
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Toplam SS", st.session_state.get('total_scheduled_count', 0))
+                
+                if next_run:
+                    # Kalan süreyi saniye cinsinden hesapla
+                    now = datetime.now(next_run.tzinfo) if next_run.tzinfo else datetime.now()
+                    remaining_seconds = int((next_run - now).total_seconds())
+                    
+                    if remaining_seconds < 0: remaining_seconds = 0
+                    c2.metric("Sıradaki", f"{remaining_seconds} sn")
+                
+                c3.metric("Son Kontrol", st.session_state.get('last_check_time', '-'))
+                st.info(f"▶️ **Otomasyon Aktif**")
+                
+                # Durdurma butonu (Daha belirgin)
+                if st.button("🛑 OTOMASYONU DURDUR", use_container_width=True, type="primary"):
+                    st.session_state.scheduler.stop_schedule()
+                    st.session_state.is_scheduling = False
+                    st.session_state.schedule_params = {}
+                    st.warning("⏸️ Otomasyon durduruldu.")
+                    st.rerun()
+
+                # Mevcut parametreleri göster
+                if st.session_state.schedule_params:
+                    params = st.session_state.schedule_params
+                    interval_val = params.get('interval', 0)
+                    st.caption(
+                        f"📊 {params.get('symbol')} @ {params.get('exchange')} "
+                        f"({params.get('timeframe')}) - Her {interval_val:.1f} dakika"
+                    )
 
         # İstatistikler
         if 'bot' in st.session_state:
@@ -162,30 +338,109 @@ def main():
 
     with view_col:
         if capture_btn:
-            try:
-                with st.spinner(f"**{symbol}** yakalanıyor..."):
-                    # Botu yeni parametrelerle initialize et (Dinamik güncelleme içerir)
+            # Interval değerine göre karar ver
+            if interval_minutes == 0:
+                # TEK SEFERLİK SCREENSHOT
+                try:
+                    with st.spinner(f"**{symbol}** yakalanıyor..."):
+                        # Botu yeni parametrelerle initialize et (Dinamik güncelleme içerir)
+                        bot = initialize_bot(headless=headless, theme=theme, width=width, height=height)
+                        
+                        success, path = bot.take_screenshot(
+                            symbol=symbol,
+                            exchange=exchange,
+                            timeframe=timeframe,
+                            mode=mode
+                        )
+
+                        if success and os.path.exists(path):
+                            st.success(f"✅ {symbol} görüntüsü hazır!")
+                            image = Image.open(path)
+                            st.image(image, use_container_width=True)
+                            
+                            with open(path, "rb") as file:
+                                st.download_button("💾 Kaydet", data=file, file_name=os.path.basename(path), use_container_width=True)
+                        else:
+                            st.error("❌ Hata: Görüntü alınamadı. Parametreleri kontrol edin.")
+                except Exception as e:
+                    st.error(f"⚠️ Hata: {str(e)}")
+            else:
+                # OTOMASYONU BAŞLAT
+                try:
+                    # Önce varolan scheduler'ı durdur
+                    if st.session_state.is_scheduling:
+                        st.session_state.scheduler.stop_schedule()
+                        st.session_state.is_scheduling = False
+                    
+                    # Botu başlat
                     bot = initialize_bot(headless=headless, theme=theme, width=width, height=height)
                     
-                    success, path = bot.take_screenshot(
+                    # Callback wrapper
+                    def callback_wrapper(**params):
+                        on_scheduled_capture(bot, **params)
+                    
+                    # Scheduler'ı başlat
+                    st.session_state.scheduler.start_schedule(
+                        interval_minutes=interval_minutes,
+                        callback_fn=callback_wrapper,
                         symbol=symbol,
                         exchange=exchange,
                         timeframe=timeframe,
                         mode=mode
                     )
-
-                    if success and os.path.exists(path):
-                        st.success(f"✅ {symbol} görüntüsü hazır!")
-                        image = Image.open(path)
-                        st.image(image, use_column_width=True)
-                        
-                        with open(path, "rb") as file:
-                            st.download_button("💾 Kaydet", data=file, file_name=os.path.basename(path), use_container_width=True)
-                    else:
-                        st.error("❌ Hata: Görüntü alınamadı. Parametreleri kontrol edin.")
-            except Exception as e:
-                st.error(f"⚠️ Hata: {str(e)}")
-        else:
+                    
+                    st.session_state.is_scheduling = True
+                    st.session_state.schedule_params = {
+                        'symbol': symbol,
+                        'exchange': exchange,
+                        'timeframe': timeframe,
+                        'interval': interval_minutes
+                    }
+                    
+                    st.success(f"✅ Otomasyon başlatıldı! Her **{interval_minutes:.1f} dakika**da screenshot alınacak.")
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"⚠️ Otomasyon hatası: {str(e)}")
+        
+        # SON YAKALANANLAR PANELİ (Klasörden dinamik yükleme)
+        recent_screenshots = load_recent_screenshots(limit=5)
+        
+        if recent_screenshots:
+            st.markdown("---")
+            st.subheader("📸 Son Yakalananlar")
+            
+            # En fazla 5 tanesini göster
+            for i, capture in enumerate(recent_screenshots):
+                if os.path.exists(capture['path']):
+                    with st.expander(
+                        f"🖼️ {capture['symbol']} @ {capture['exchange']} - "
+                        f"{capture['timestamp'].strftime('%H:%M:%S')}",
+                        expanded=(i == 0)  # İlk olanı açık göster
+                    ):
+                        # Thumbnail görüntü
+                        try:
+                            img = Image.open(capture['path'])
+                            st.image(img, use_container_width=True)
+                            
+                            # Detaylar
+                            col1, col2, col3 = st.columns(3)
+                            col1.caption(f"⏱️ {capture['timeframe']}")
+                            col2.caption(f"📅 {capture['timestamp'].strftime('%d/%m/%Y')}")
+                            col3.caption(f"🕐 {capture['timestamp'].strftime('%H:%M:%S')}")
+                            
+                            # İndir butonu
+                            with open(capture['path'], "rb") as file:
+                                st.download_button(
+                                    "💾 İndir",
+                                    data=file,
+                                    file_name=os.path.basename(capture['path']),
+                                    key=f"download_{i}_{int(capture['timestamp'].timestamp())}"
+                                )
+                        except Exception as e:
+                            st.error(f"Görüntü yüklenemedi: {str(e)}")
+        
+        if not capture_btn and not recent_screenshots:
             st.info("Sol taraftan ayarları yapıp butona basın. Görüntü bu alanda belirecektir.")
 
     # Footer
@@ -194,6 +449,12 @@ def main():
             ChartCapture Pro • Powered by Antigravity
         </div>
     """, unsafe_allow_html=True)
+
+    # HEARTBEAT: Otomasyon aktifse 5 sn'de bir yenile
+    if st.session_state.is_scheduling:
+        import time as time_module
+        time_module.sleep(5)
+        st.rerun()
 
 if __name__ == "__main__":
     main()
